@@ -1,4 +1,5 @@
 aiofiles
-jinja2
+torch
+transformers
 starlette
 uvicorn

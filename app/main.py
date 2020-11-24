@@ -12,13 +12,6 @@ from transformers import (
     GPT2Tokenizer,
 )
 
-middleware = [
-    Middleware(CORSMiddleware, allow_origins=['*'])
-]
-
-app = Starlette(debug=True, middleware=middleware)
-
-### Setup ML model
 ## Set Default Values
 MAX_LENGTH = int(10000)  # Hardcoded max length to avoid infinite loop
 DEFAULT_SEED = 42
@@ -26,19 +19,52 @@ START_TOKEN = "<BOS>"
 STOP_TOKEN = "<EOS>"
 PAD_TOKEN = "<PAD>"
 special_tokens_dict = {'bos_token': START_TOKEN, 'eos_token': STOP_TOKEN, 'pad_token': PAD_TOKEN}
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-## Initialize model
-model_class = GPT2LMHeadModel
-tokenizer_class = GPT2Tokenizer
+# So we can use these later
+async def setup_model():
+    ### Setup ML model
+    ## Initialize model
+    model_class = GPT2LMHeadModel
+    tokenizer_class = GPT2Tokenizer
 
-# Initialize tokenizer with special tokens
-tokenizer = GPT2Tokenizer.from_pretrained("./model")
-tokenizer.add_special_tokens(special_tokens_dict)
+    # Initialize tokenizer with special tokens
+    global tokenizer
+    tokenizer = GPT2Tokenizer.from_pretrained("./model")
+    tokenizer.add_special_tokens(special_tokens_dict)
 
-# Initialize model from pretrained Rumi model
-model = GPT2LMHeadModel.from_pretrained("./model")
-device = torch.device("cpu")
-model.to(device)
+    # Initialize model from pretrained Rumi model
+    global model
+    model = GPT2LMHeadModel.from_pretrained("./model")
+    model.to(device)
+
+middleware = [
+    Middleware(CORSMiddleware, allow_origins=['*'])
+]
+
+app = Starlette(debug=True, middleware=middleware, on_startup=[setup_model])
+
+### Setup ML model
+## Set Default Values
+# MAX_LENGTH = int(10000)  # Hardcoded max length to avoid infinite loop
+# DEFAULT_SEED = 42
+# START_TOKEN = "<BOS>"
+# STOP_TOKEN = "<EOS>"
+# PAD_TOKEN = "<PAD>"
+# special_tokens_dict = {'bos_token': START_TOKEN, 'eos_token': STOP_TOKEN, 'pad_token': PAD_TOKEN}
+
+# ## Initialize model
+# model_class = GPT2LMHeadModel
+# tokenizer_class = GPT2Tokenizer
+
+# # Initialize tokenizer with special tokens
+# tokenizer = GPT2Tokenizer.from_pretrained("./model")
+# tokenizer.add_special_tokens(special_tokens_dict)
+
+# # Initialize model from pretrained Rumi model
+# model = GPT2LMHeadModel.from_pretrained("./model")
+# device = torch.device("cpu")
+# model.to(device)
 
 def adjust_length_to_model(length, max_sequence_length):
     if length < 0 and max_sequence_length > 0:
